@@ -12,8 +12,6 @@ use clap::Parser;
 use log::{error, info};
 use tokio::net::TcpListener;
 
-use crate::handlers::SignerState;
-
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
@@ -24,43 +22,33 @@ async fn main() {
 
     match cli.command {
         Commands::Start { config } => {
-            start(config).await;
+            if let Err(e) = start(config).await {
+                error!("{}", e);
+            }
         }
     }
 }
 
-async fn start(config_path: PathBuf) {
-    let config = match Config::from_file(config_path) {
-        Ok(config) => config,
-        Err(e) => {
-            error!("Failed to load config: {}", e);
-            return;
-        }
-    };
+async fn start(config_path: PathBuf) -> Result<(), String> {
+    let config =
+        Config::from_file(config_path).map_err(|e| format!("Failed to load config: {}", e))?;
 
-    // Initialize signer state from config
-    let signer_state = match SignerState::new(&config.service.private_key) {
-        Ok(state) => state,
-        Err(e) => {
-            error!("Failed to initialize signer state: {}", e);
-            return;
-        }
-    };
+    let routes = handlers::routes(&config)
+        .await
+        .map_err(|e| format!("Failed to initialize routes: {}", e))?;
 
-    let app = Router::new().merge(handlers::routes(signer_state));
+    let app = Router::new().merge(routes);
 
     let bind_addr = format!("0.0.0.0:{}", config.service.port);
     info!("Starting service on {}...", bind_addr);
 
-    let listener = match TcpListener::bind(&bind_addr).await {
-        Ok(l) => l,
-        Err(e) => {
-            error!("Failed to bind to {}: {}", bind_addr, e);
-            return;
-        }
-    };
+    let listener = TcpListener::bind(&bind_addr)
+        .await
+        .map_err(|e| format!("Failed to bind to {}: {}", bind_addr, e))?;
 
-    if let Err(e) = axum::serve(listener, app).await {
-        error!("Server error: {}", e);
-    }
+    axum::serve(listener, app)
+        .await
+        .map_err(|e| format!("Server error: {}", e))?;
+
+    Ok(())
 }

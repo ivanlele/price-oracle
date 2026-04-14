@@ -1,10 +1,10 @@
-use std::sync::Arc;
-
-use elements::secp256k1_zkp::{All, Secp256k1, SecretKey};
+pub mod state;
 
 use axum::{Json, Router, response::IntoResponse, routing::get};
-
 use serde_json::json;
+
+use crate::config::Config;
+use state::AppState;
 
 async fn version() -> impl IntoResponse {
     Json(json!({
@@ -12,29 +12,12 @@ async fn version() -> impl IntoResponse {
     }))
 }
 
-pub fn routes(signer_state: SignerState) -> Router {
-    Router::new()
-        .route("/simplicity-unchained/version", get(version))
-        .with_state(signer_state)
-}
+pub async fn routes(config: &Config) -> Result<Router, String> {
+    let app_state = AppState::from_config(config).await?;
 
-#[derive(Clone, Debug)]
-pub struct SignerState {
-    pub secret_key: SecretKey,
-    pub secp: Arc<Secp256k1<All>>,
-}
+    let router = Router::new()
+        .route("/price-oracle/version", get(version))
+        .with_state(app_state);
 
-impl SignerState {
-    pub fn new(secret_key_hex: &str) -> Result<Self, String> {
-        let secret_key_bytes =
-            hex::decode(secret_key_hex).map_err(|e| format!("Invalid private key hex: {}", e))?;
-
-        let secret_key = SecretKey::from_slice(&secret_key_bytes)
-            .map_err(|e| format!("Invalid private key: {}", e))?;
-
-        Ok(Self {
-            secret_key,
-            secp: Arc::new(Secp256k1::new()),
-        })
-    }
+    Ok(router)
 }

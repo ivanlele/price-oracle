@@ -17,7 +17,21 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 pub struct ServiceConfig {
     pub port: u16,
+    pub signer: SignerConfig,
+    pub db: DbConfig,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SignerConfig {
     pub private_key: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DbConfig {
+    pub url: String,
+    pub username: String,
+    pub password: String,
+    pub database: String,
 }
 
 impl Config {
