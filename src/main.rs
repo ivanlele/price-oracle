@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod crawler;
 mod db;
 mod handlers;
 

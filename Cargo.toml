@@ -18,3 +18,5 @@ tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "macros", "migrate", "uuid", "chrono"] }
 validator = { version = "0.20.0", features = ["derive"] }
+alloy = { version = "1", features = ["provider-http", "sol-types", "contract", "json-abi"] }
+reqwest = { version = "0.13.2", default-features = false }
