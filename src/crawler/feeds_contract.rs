@@ -29,6 +29,7 @@ pub struct FeedContract {
     contract: EACAggregatorProxy::EACAggregatorProxyInstance<RootProvider>,
 }
 
+#[allow(unused)]
 pub struct LatestRoundData {
     pub round_id: u128,
     pub answer: i128,
@@ -52,6 +53,7 @@ impl FeedContract {
         Ok(Self { contract })
     }
 
+    #[allow(unused)]
     pub async fn latest_answer(&self) -> Result<i128, FeedContractError> {
         let answer = self.contract.latestAnswer().call().await?;
         answer

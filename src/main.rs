@@ -35,11 +35,22 @@ async fn start(config_path: PathBuf) -> Result<(), String> {
     let config =
         Config::from_file(config_path).map_err(|e| format!("Failed to load config: {}", e))?;
 
-    let routes = handlers::routes(&config)
-        .await
-        .map_err(|e| format!("Failed to initialize routes: {}", e))?;
+    let app_state = handlers::state::AppState::from_config(&config).await?;
 
-    let app = Router::new().merge(routes);
+    let crawler = crawler::Crawler::new(
+        &config.service.feed_crawler,
+        app_state.signer.clone(),
+        app_state.db.clone(),
+    )
+    .await
+    .map_err(|e| format!("Failed to initialize crawler: {}", e))?;
+
+    crawler
+        .start()
+        .await
+        .map_err(|e| format!("Crawler failed: {}", e))?;
+
+    let app = Router::new().merge(handlers::routes(app_state));
 
     let bind_addr = format!("0.0.0.0:{}", config.service.port);
     info!("Starting service on {}...", bind_addr);

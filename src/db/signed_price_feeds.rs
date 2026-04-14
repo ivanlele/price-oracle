@@ -66,7 +66,14 @@ impl DbState {
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "INSERT INTO signed_price_feeds (id, feed_type, description, price, timestamp, valid_until, signature)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT (id) DO UPDATE SET
+                feed_type = EXCLUDED.feed_type,
+                description = EXCLUDED.description,
+                price = EXCLUDED.price,
+                timestamp = EXCLUDED.timestamp,
+                valid_until = EXCLUDED.valid_until,
+                signature = EXCLUDED.signature",
         )
         .bind(feed.id as i64)
         .bind(feed.feed_type.to_string())

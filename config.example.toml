@@ -17,14 +17,8 @@ database = "price_oracle"
 # Interval in seconds at which the feed crawler will run
 interval_seconds = 60
 rpc_url = "https://example.com"
-
-# Exchange rate
-[[service.feed_crawler.rates]]
-description = "BTC/USD"
-addresses = ["0x91D32e6f01d6473b596f54c6E304e06d774f86b2"]
-
-# Cross rate
-[[service.feed_crawler.rates]]
-description = "BTC/USD/USDT"
-addresses = ["0x91D32e6f01d6473b596f54c6E304e06d774f86b2", "0x023dfc789db466DD5C900DC04706727a3A9Cf3DE"]
-
+feeds = ["BTC/USD", "BTC/USD/USDT"]
+addresses = [
+    "0x91D32e6f01d6473b596f54c6E304e06d774f86b2",
+    "0x023dfc789db466DD5C900DC04706727a3A9Cf3DE",
+]
