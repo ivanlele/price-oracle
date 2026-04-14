@@ -1,11 +1,12 @@
 use axum::{Json, extract::Query, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use serde_json::json;
+use utoipa::IntoParams;
 use validator::Validate;
 
 use super::state::DbState;
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, IntoParams)]
 pub struct PaginationParams {
     #[serde(default = "default_limit")]
     #[validate(range(min = 1, max = 100, message = "limit must be between 1 and 100"))]
@@ -18,17 +19,24 @@ fn default_limit() -> u32 {
     20
 }
 
+#[utoipa::path(
+    get,
+    path = "/price-oracle/feeds",
+    params(PaginationParams),
+    responses(
+        (status = 200, description = "Paginated list of price feeds", body = super::PriceFeedListResponse),
+        (status = 400, description = "Invalid query parameters", body = super::ErrorResponse),
+        (status = 500, description = "Internal server error", body = super::ErrorResponse),
+    ),
+    tag = "Price Feeds"
+)]
 pub async fn list_price_feeds(
     State(db): State<DbState>,
     Query(params): Query<PaginationParams>,
 ) -> impl IntoResponse {
     if let Err(errors) = params.validate() {
         let error_msg = errors.to_string();
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "error": error_msg })),
-        )
-            .into_response();
+        return (StatusCode::BAD_REQUEST, Json(json!({ "error": error_msg }))).into_response();
     }
 
     let limit = params.limit as i64;

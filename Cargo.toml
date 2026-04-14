@@ -2,6 +2,7 @@
 name = "price-oracle"
 version = "0.1.0"
 edition = "2024"
+default-run = "price-oracle"
 
 [dependencies]
 axum = "0.8.8"
@@ -20,3 +21,14 @@ sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "macros", "
 validator = { version = "0.20.0", features = ["derive"] }
 alloy = { version = "1", features = ["provider-http", "sol-types", "contract", "json-abi"] }
 reqwest = { version = "0.13.2", default-features = false }
+tower-http = { version = "0.6", features = ["cors"] }
+utoipa = { version = "5", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+
+[[bin]]
+name = "price-oracle"
+path = "src/main.rs"
+
+[[bin]]
+name = "doc"
+path = "doc/main.rs"

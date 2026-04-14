@@ -13,6 +13,7 @@ use axum::Router;
 use clap::Parser;
 use log::{error, info};
 use tokio::net::TcpListener;
+use tower_http::cors::CorsLayer;
 
 #[tokio::main]
 async fn main() {
@@ -50,7 +51,9 @@ async fn start(config_path: PathBuf) -> Result<(), String> {
         .await
         .map_err(|e| format!("Crawler failed: {}", e))?;
 
-    let app = Router::new().merge(handlers::routes(app_state));
+    let app = Router::new()
+        .merge(handlers::routes(app_state))
+        .layer(CorsLayer::permissive());
 
     let bind_addr = format!("0.0.0.0:{}", config.service.port);
     info!("Starting service on {}...", bind_addr);

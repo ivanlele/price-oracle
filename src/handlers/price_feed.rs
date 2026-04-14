@@ -3,6 +3,19 @@ use serde_json::json;
 
 use super::state::DbState;
 
+#[utoipa::path(
+    get,
+    path = "/price-oracle/feed/{id}",
+    params(
+        ("id" = u32, Path, description = "Price feed ID")
+    ),
+    responses(
+        (status = 200, description = "Price feed found", body = super::PriceFeedResponse),
+        (status = 404, description = "Price feed not found", body = super::ErrorResponse),
+        (status = 500, description = "Internal server error", body = super::ErrorResponse),
+    ),
+    tag = "Price Feeds"
+)]
 pub async fn get_price_feed(State(db): State<DbState>, Path(id): Path<u32>) -> impl IntoResponse {
     match db.get_signed_price_feed(id).await {
         Ok(Some(feed)) => (
