@@ -1,4 +1,5 @@
 mod price_feed;
+mod price_feed_listings;
 mod signer;
 pub mod state;
 
@@ -20,6 +21,10 @@ pub async fn routes(config: &Config) -> Result<Router, String> {
     let router = Router::new()
         .route("/price-oracle/version", get(version))
         .route("/price-oracle/feed/{id}", get(price_feed::get_price_feed))
+        .route(
+            "/price-oracle/feeds",
+            get(price_feed_listings::list_price_feeds),
+        )
         .route("/price-oracle/public-key", get(signer::get_public_key))
         .with_state(app_state);
 
