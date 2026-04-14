@@ -50,6 +50,37 @@ pub struct Crawler {
     validity_seconds: u64,
 }
 
+fn resolve_feed_source(
+    feed_desc: &str,
+    pairs: &[cross_rate_converter::ContractPair],
+) -> Result<(FeedType, FeedSource), CrawlerError> {
+    let hops: Vec<&str> = feed_desc.split('/').collect();
+    if hops.len() != 2 {
+        let converter = CrossRateConverter::new(feed_desc, pairs)?;
+        return Ok((FeedType::CrossRate, FeedSource::Cross { converter }));
+    }
+
+    // Simple exchange rate — find the matching contract.
+    let from = hops[0].trim().to_uppercase();
+    let to = hops[1].trim().to_uppercase();
+    let idx = pairs
+        .iter()
+        .position(|p| {
+            (p.base == from && p.quote == to)
+                || (p.base == to && p.quote == from)
+        })
+        .ok_or_else(|| {
+            cross_rate_converter::CrossRateError::MissingPair {
+                from: from.clone(),
+                to: to.clone(),
+            }
+        })?;
+    Ok((
+        FeedType::ExchangeRate,
+        FeedSource::Exchange { contract_index: idx },
+    ))
+}
+
 impl Crawler {
     pub async fn new(
         config: &FeedCrawlerConfig,
@@ -69,35 +100,7 @@ impl Crawler {
 
         let mut feeds = Vec::new();
         for (i, feed_desc) in config.feeds.iter().enumerate() {
-            let hops: Vec<&str> = feed_desc.split('/').collect();
-
-            let (feed_type, source) = if hops.len() == 2 {
-                // Simple exchange rate — find the matching contract.
-                let from = hops[0].trim().to_uppercase();
-                let to = hops[1].trim().to_uppercase();
-                let idx = pairs
-                    .iter()
-                    .position(|p| {
-                        (p.base == from && p.quote == to)
-                            || (p.base == to && p.quote == from)
-                    })
-                    .ok_or_else(|| {
-                        cross_rate_converter::CrossRateError::MissingPair {
-                            from: from.clone(),
-                            to: to.clone(),
-                        }
-                    })?;
-                (
-                    FeedType::ExchangeRate,
-                    FeedSource::Exchange { contract_index: idx },
-                )
-            } else {
-                // Cross rate.
-                let converter =
-                    CrossRateConverter::new(feed_desc, &pairs)?;
-                (FeedType::CrossRate, FeedSource::Cross { converter })
-            };
-
+            let (feed_type, source) = resolve_feed_source(feed_desc, &pairs)?;
             feeds.push(FeedEntry {
                 id: i as u32,
                 description: feed_desc.clone(),
@@ -120,7 +123,8 @@ impl Crawler {
         let listings = self.db.get_price_feed_listings(i64::MAX, 0).await?;
 
         for feed in &self.feeds {
-            if !listings.iter().any(|l| l.description == feed.description) {
+            let already_listed = listings.iter().any(|l| l.description == feed.description);
+            if !already_listed {
                 let listing = PriceFeedListing {
                     id: feed.id,
                     description: feed.description.clone(),
@@ -129,12 +133,13 @@ impl Crawler {
                 info!("Created price feed listing: {}", feed.description);
             }
 
-            if self.db.get_signed_price_feed(feed.id).await?.is_none() {
-                info!(
-                    "Feed '{}' not yet in signed_price_feeds, will be created on first crawl",
-                    feed.description
-                );
+            if self.db.get_signed_price_feed(feed.id).await?.is_some() {
+                continue;
             }
+            info!(
+                "Feed '{}' not yet in signed_price_feeds, will be created on first crawl",
+                feed.description
+            );
         }
         Ok(())
     }

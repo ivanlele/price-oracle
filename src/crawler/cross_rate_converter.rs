@@ -143,28 +143,20 @@ impl CrossRateConverter {
             prices[idx] = round_data.answer as u64;
         }
 
-        let first = &self.steps[0];
-        let first_price = prices[first.contract_index] as u128;
+        // Start at the first step's scale (representing 1.0 in fixed-point),
+        // so every step — including the first — uses the same multiply/divide logic.
+        let mut result = self.steps[0].scale;
 
-        let mut result = if first.invert {
-            if first_price == 0 {
+        for step in &self.steps {
+            let price = prices[step.contract_index] as u128;
+            if price == 0 && step.invert {
                 return Err(CrossRateError::DivisionByZero);
             }
-            first.scale * first.scale / first_price
-        } else {
-            first_price
-        };
-
-        for step in &self.steps[1..] {
-            let price = prices[step.contract_index] as u128;
             if step.invert {
-                if price == 0 {
-                    return Err(CrossRateError::DivisionByZero);
-                }
                 result = result * step.scale / price;
-            } else {
-                result = result * price / step.scale;
+                continue;
             }
+            result = result * price / step.scale;
         }
 
         Ok(result as u64)
