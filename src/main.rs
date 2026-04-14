@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod db;
 mod handlers;
 
 use cli::{Cli, Commands};
