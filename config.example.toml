@@ -16,6 +16,7 @@ database = "price_oracle"
 [service.feed_crawler]
 # Interval in seconds at which the feed crawler will run
 interval_seconds = 60
+validity_seconds = 3600
 rpc_url = "https://example.com"
 feeds = ["BTC/USD", "BTC/USD/USDT"]
 addresses = [

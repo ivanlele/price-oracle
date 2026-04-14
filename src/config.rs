@@ -38,6 +38,7 @@ pub struct DbConfig {
 #[derive(Debug, Deserialize)]
 pub struct FeedCrawlerConfig {
     pub interval_seconds: u64,
+    pub validity_seconds: u64,
     pub rpc_url: String,
     pub feeds: Vec<String>,
     pub addresses: Vec<String>,

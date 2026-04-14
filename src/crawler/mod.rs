@@ -47,6 +47,7 @@ pub struct Crawler {
     signer: SignerState,
     db: DbState,
     interval_seconds: u64,
+    validity_seconds: u64,
 }
 
 impl Crawler {
@@ -111,6 +112,7 @@ impl Crawler {
             signer,
             db,
             interval_seconds: config.interval_seconds,
+            validity_seconds: config.validity_seconds,
         })
     }
 
@@ -143,7 +145,7 @@ impl Crawler {
             .unwrap()
             .as_secs();
         let timestamp = now as u32;
-        let valid_until = (now + self.interval_seconds) as u32;
+        let valid_until = (now + self.validity_seconds) as u32;
         let keypair = Keypair::from_secret_key(&self.signer.secp, &self.signer.secret_key);
 
         for feed in &self.feeds {
