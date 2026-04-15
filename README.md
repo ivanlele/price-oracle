@@ -8,7 +8,7 @@ The Price Oracle Service is a backend system designed to fetch, sign, and serve 
 
 Copy `config.example.toml` to `config.toml` and edit it as needed. For demonstration, the service is almost ready with this configuration, you only need to provide [service.feed_crawler.rpc_url].
 
-### 3. Run the Service
+### 2. Run the Service
 
 ```bash
 cargo run -- start # uses config.toml by default
