@@ -36,8 +36,21 @@ This starts a Swagger UI at `http://localhost:8081/swagger-ui/` where you can br
 
 The crawler periodically reads prices from on-chain Chainlink-compatible `EACAggregatorProxy` contracts. On startup it queries each contract's `description()` (e.g. `"BTC / USD"`) and `decimals()` to build a lookup table, then matches the configured `feeds` entries against this table.
 
-Each crawled feed is signed with a Schnorr signature using the configured private key. The signed result is stored in PostgreSQL and served via the API.
+Each crawled feed is signed with a Schnorr signature using the configured private key. The signed result is stored in PostgreSQL and served via the API. Message format for signing is a 64-byte buffer:
 
+| Offset | Size | Field |
+|--------|------|-------|
+| 0 | 4 bytes | Feed ID (`u32`, big-endian) |
+| 4 | 8 bytes | Price (`u64`, big-endian) |
+| 12 | 4 bytes | Timestamp (`u32`, big-endian, UNIX epoch) |
+| 16 | 4 bytes | Valid Until (`u32`, big-endian, UNIX epoch) |
+| 20 | 44 bytes | Fixed suffix (`FEED_MESSAGE_SUFFIX`) |
+
+The 44-byte suffix is a constant:
+
+```
+7d17e21ff2908408473658adab09a690ede3e6d74112222f79737296447475c9031e7388931bb03890c1e79c
+```
 ### Feed Types
 
 There are two types of feeds, determined by the format of entries in the `feeds` config array:

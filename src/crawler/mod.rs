@@ -7,6 +7,7 @@ use elements::secp256k1_zkp::{
     Keypair, Message,
     hashes::{Hash, sha256},
 };
+use hex_literal::hex;
 use log::{error, info};
 
 use crate::config::FeedCrawlerConfig;
@@ -16,6 +17,10 @@ use crate::handlers::state::{DbState, SignerState};
 
 use cross_rate_converter::{CrossRateConverter, build_contract_pairs};
 use feeds_contract::{FeedContract, FeedContractError};
+
+const FEED_MESSAGE_SUFFIX: [u8; 44] = hex!(
+    "7d17e21ff2908408473658adab09a690ede3e6d74112222f79737296447475c9031e7388931bb03890c1e79c"
+);
 
 #[derive(Debug, thiserror::Error)]
 pub enum CrawlerError {
@@ -65,19 +70,16 @@ fn resolve_feed_source(
     let to = hops[1].trim().to_uppercase();
     let idx = pairs
         .iter()
-        .position(|p| {
-            (p.base == from && p.quote == to)
-                || (p.base == to && p.quote == from)
-        })
-        .ok_or_else(|| {
-            cross_rate_converter::CrossRateError::MissingPair {
-                from: from.clone(),
-                to: to.clone(),
-            }
+        .position(|p| (p.base == from && p.quote == to) || (p.base == to && p.quote == from))
+        .ok_or_else(|| cross_rate_converter::CrossRateError::MissingPair {
+            from: from.clone(),
+            to: to.clone(),
         })?;
     Ok((
         FeedType::ExchangeRate,
-        FeedSource::Exchange { contract_index: idx },
+        FeedSource::Exchange {
+            contract_index: idx,
+        },
     ))
 }
 
@@ -156,21 +158,19 @@ impl Crawler {
         for feed in &self.feeds {
             let price = match &feed.source {
                 FeedSource::Exchange { contract_index } => {
-                    let round_data =
-                        self.contracts[*contract_index].latest_round_data().await?;
+                    let round_data = self.contracts[*contract_index].latest_round_data().await?;
                     round_data.answer as u64
                 }
-                FeedSource::Cross { converter } => {
-                    converter.convert(&self.contracts).await?
-                }
+                FeedSource::Cross { converter } => converter.convert(&self.contracts).await?,
             };
 
-            // Build message: id(4) || price(8) || timestamp(4) || valid_until(4) = 20 bytes
-            let mut message_data = [0u8; 20];
+            // Build message: id(4) || price(8) || timestamp(4) || valid_until(4) || suffix(44) = 64 bytes
+            let mut message_data = [0u8; 64];
             message_data[0..4].copy_from_slice(&feed.id.to_be_bytes());
             message_data[4..12].copy_from_slice(&price.to_be_bytes());
             message_data[12..16].copy_from_slice(&timestamp.to_be_bytes());
             message_data[16..20].copy_from_slice(&valid_until.to_be_bytes());
+            message_data[20..64].copy_from_slice(&FEED_MESSAGE_SUFFIX);
 
             let hash = sha256::Hash::hash(&message_data);
             let message = Message::from_digest(hash.to_byte_array());
