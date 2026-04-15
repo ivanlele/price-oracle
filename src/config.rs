@@ -33,6 +33,7 @@ pub struct DbConfig {
     pub username: String,
     pub password: String,
     pub database: String,
+    pub max_connections: u32,
 }
 
 #[derive(Debug, Deserialize)]

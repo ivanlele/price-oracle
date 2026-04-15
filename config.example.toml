@@ -12,6 +12,7 @@ url = "localhost:5432"
 username = "oracle"
 password = "oracle"
 database = "price_oracle"
+max_connections = 5
 
 [service.feed_crawler]
 # Interval in seconds at which the feed crawler will run

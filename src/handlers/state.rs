@@ -41,7 +41,7 @@ impl DbState {
         );
 
         let pool = PgPoolOptions::new()
-            .max_connections(5)
+            .max_connections(config.max_connections)
             .connect(&connection_string)
             .await
             .map_err(|e| format!("Failed to connect to database: {}", e))?;
