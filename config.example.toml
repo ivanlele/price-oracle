@@ -5,7 +5,7 @@ port = 30445
 [service.signer]
 # secpr256k1 32-byte hex-encoded private key, used for signing,
 # this is a example key, do not use it anywhere else
-private_key = "804622cda0d8e634317a12651d91751ceff5c081f2b5f63ef7912725c7275e5d"
+private_key = "804622cda0d8e634317a12651d91751ceff5c081f2b5f63ef7912725c7275e5d" # 2dnETLcB8aLzvRZH4etH41hGXYKYEvbUouR
 
 [service.db] # Postgres database configuration
 url = "localhost:5432"
@@ -13,6 +13,11 @@ username = "oracle"
 password = "oracle"
 database = "price_oracle"
 max_connections = 5
+
+[service.elements]
+url = "http://localhost:18884"
+rpc_user = "elements"
+rpc_password = "elements"
 
 [service.feed_crawler]
 # Interval in seconds at which the feed crawler will run
