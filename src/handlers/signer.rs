@@ -1,5 +1,5 @@
+use crate::elements::secp256k1_zkp::PublicKey;
 use axum::{Json, extract::State, response::IntoResponse};
-use elements::secp256k1_zkp::PublicKey;
 use serde_json::json;
 
 use super::state::SignerState;

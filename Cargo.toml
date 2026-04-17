@@ -7,7 +7,6 @@ default-run = "price-oracle"
 [dependencies]
 axum = "0.8.8"
 clap = { version = "4.6.0", features = ["derive"] }
-elements = "0.26.1"
 hex = "0.4.3"
 log = "0.4.29"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -25,6 +24,9 @@ tower-http = { version = "0.6", features = ["cors"] }
 utoipa = { version = "5", features = ["axum_extras"] }
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 hex-literal = "1.1.0"
+rand = "0.8"
+smplx-std = { git = "https://github.com/BlockstreamResearch/smplx.git", rev = "cbf6a7257e01a5700983442d57980dd312cf2119"}
+electrsd = { version = "0.29.0", features = ["legacy"] }
 
 [[bin]]
 name = "price-oracle"

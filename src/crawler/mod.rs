@@ -3,7 +3,7 @@ pub mod feeds_contract;
 
 use std::time::Duration;
 
-use elements::secp256k1_zkp::{
+use crate::elements::secp256k1_zkp::{
     Keypair, Message,
     hashes::{Hash, sha256},
 };

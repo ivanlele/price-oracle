@@ -5,7 +5,7 @@ port = 30445
 [service.signer]
 # secpr256k1 32-byte hex-encoded private key, used for signing,
 # this is a example key, do not use it anywhere else
-private_key = "804622cda0d8e634317a12651d91751ceff5c081f2b5f63ef7912725c7275e5d" # 2dnETLcB8aLzvRZH4etH41hGXYKYEvbUouR
+private_key = "804622cda0d8e634317a12651d91751ceff5c081f2b5f63ef7912725c7275e5d"
 
 [service.db] # Postgres database configuration
 url = "localhost:5432"
@@ -14,15 +14,21 @@ password = "oracle"
 database = "price_oracle"
 max_connections = 5
 
-[service.elements]
-url = "http://localhost:18884"
+[service.timekeeper]
+rpc_url = "http://localhost:18884"
 rpc_user = "elements"
 rpc_password = "elements"
+esplora_url = "http://localhost:58077"
+signer_mnemonic = "exist carry drive collect lend cereal occur much tiger just involve mean"
+publish_interval_seconds = 60 # Interval in seconds at which the timekeeper will publish a new timestamp
+return_to_issuer_interval_seconds = 300 # Interval in seconds after which the timekeeper will return the timestamp UTXO to the issuer if not used
+finalization_timeout_seconds = 300 # Time in seconds to wait for a transaction to be finalized before considering it failed
+max_supply = 1000000000000000 # Maximum supply of the timestamp asset (in satoshis)
+contract_json = '{"entity":{"domain":"timestamp.example.com"},"name":"Timestamp","ticker":"TIME","version":0}'
 
 [service.feed_crawler]
-# Interval in seconds at which the feed crawler will run
-interval_seconds = 60
-validity_seconds = 3600
+interval_seconds = 60 # Interval in seconds at which the feed crawler will run
+validity_seconds = 3600 
 rpc_url = "https://example.com"
 feeds = ["BTC/USD", "BTC/USD/USDT"]
 addresses = [

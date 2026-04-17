@@ -1,0 +1,24 @@
+/*
+ * TIMESTAMP COVENANT
+ *
+ * Enforces that output 0 pays to the issuer's address.
+ *
+ * The issuer script hash is passed as a program argument so that
+ * the same covenant binary can be reused across different issuers.
+ *
+ * Tick UTXOs are locked to this covenant; anyone can trigger a spend,
+ * but the funds can only flow back to the issuer.
+ */
+fn main() {
+    // Output 0 must pay to the issuer's address
+    let out_script_hash: u256 = unwrap(jet::output_script_hash(0));
+    assert!(jet::eq_256(param::ISSUER_SCRIPT_HASH, out_script_hash));
+
+    // Output 0 value must be non-zero (explicit amount expected)
+    let out_amt: (Either<(u1, u256), u256>, Either<(u1, u256), u64>) = unwrap(jet::output_amount(0));
+    let (_, value_either): (Either<(u1, u256), u256>, Either<(u1, u256), u64>) = out_amt;
+    match value_either {
+        Left(confidential: (u1, u256)) => panic!(),
+        Right(value: u64) => assert!(jet::lt_64(0, value)),
+    };
+}

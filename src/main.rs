@@ -1,8 +1,12 @@
+mod artifacts;
 mod cli;
 mod config;
 mod crawler;
 mod db;
 mod handlers;
+mod timekeeper;
+
+use simplex::simplicityhl::elements;
 
 use cli::{Cli, Commands};
 use config::Config;
@@ -14,6 +18,8 @@ use clap::Parser;
 use log::{error, info};
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
+
+use crate::timekeeper::Timekeeper;
 
 #[tokio::main]
 async fn main() {
@@ -50,6 +56,8 @@ async fn start(config_path: PathBuf) -> Result<(), String> {
         .start()
         .await
         .map_err(|e| format!("Crawler failed: {}", e))?;
+
+    Timekeeper::start(config.service.timekeeper.clone(), app_state.db.clone());
 
     let app = Router::new()
         .merge(handlers::routes(app_state))

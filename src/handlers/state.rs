@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use crate::elements::secp256k1_zkp::{All, Secp256k1, SecretKey};
 use axum::extract::FromRef;
-use elements::secp256k1_zkp::{All, Secp256k1, SecretKey};
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
