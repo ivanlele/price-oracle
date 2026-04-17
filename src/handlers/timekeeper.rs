@@ -4,7 +4,7 @@ use serde_json::json;
 use utoipa::IntoParams;
 use validator::Validate;
 
-use super::state::DbState;
+use super::state::{DbState, TimekeeperInfo};
 
 #[derive(Debug, Deserialize, Validate, IntoParams)]
 pub struct PaginationParams {
@@ -17,6 +17,20 @@ pub struct PaginationParams {
 
 fn default_limit() -> u32 {
     20
+}
+
+#[utoipa::path(
+    get,
+    path = "/price-oracle/timekeeper/issuer-spk",
+    responses(
+        (status = 200, description = "Issuer script pubkey", body = super::IssuerSpkResponse),
+    ),
+    tag = "Timekeeper"
+)]
+pub async fn get_issuer_spk(State(info): State<TimekeeperInfo>) -> impl IntoResponse {
+    Json(json!({
+        "issuer_spk": info.issuer_spk_hex,
+    }))
 }
 
 #[utoipa::path(

@@ -59,6 +59,7 @@ impl DbState {
 pub struct AppState {
     pub signer: SignerState,
     pub db: DbState,
+    pub timekeeper_info: TimekeeperInfo,
 }
 
 impl FromRef<AppState> for SignerState {
@@ -73,11 +74,34 @@ impl FromRef<AppState> for DbState {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct TimekeeperInfo {
+    pub issuer_spk_hex: String,
+}
+
+impl FromRef<AppState> for TimekeeperInfo {
+    fn from_ref(state: &AppState) -> Self {
+        state.timekeeper_info.clone()
+    }
+}
+
 impl AppState {
     pub async fn from_config(config: &Config) -> Result<Self, String> {
         let signer = SignerState::from_config(&config.service.signer)?;
         let db = DbState::from_config(&config.service.db).await?;
 
-        Ok(Self { signer, db })
+        let timekeeper_info = {
+            let tk_signer = config.service.timekeeper.signer();
+            let issuer_spk = tk_signer.get_address().script_pubkey();
+            TimekeeperInfo {
+                issuer_spk_hex: hex::encode(issuer_spk.as_bytes()),
+            }
+        };
+
+        Ok(Self {
+            signer,
+            db,
+            timekeeper_info,
+        })
     }
 }

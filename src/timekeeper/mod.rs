@@ -33,12 +33,12 @@ pub enum Error {
 }
 
 /// SHA-256 hash of a script, matching the Simplicity `output_script_hash` jet.
-fn script_hash(spk: &elements::Script) -> [u8; 32] {
+pub fn script_hash(spk: &elements::Script) -> [u8; 32] {
     elements::hashes::sha256::Hash::hash(spk.as_bytes()).to_byte_array()
 }
 
 /// Build the covenant script_pubkey parameterised by the issuer's script hash.
-fn covenant_spk(issuer_script_hash: [u8; 32], network: &SimplicityNetwork) -> elements::Script {
+pub fn covenant_spk(issuer_script_hash: [u8; 32], network: &SimplicityNetwork) -> elements::Script {
     let args = TimestampCovenantArguments { issuer_script_hash };
     let program = TimestampCovenantProgram::new(args);
     program.get_program().get_script_pubkey(network)

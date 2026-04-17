@@ -77,6 +77,12 @@ pub struct TimekeeperTickListResponse {
     pub offset: i64,
 }
 
+#[allow(dead_code)]
+#[derive(Serialize, ToSchema)]
+pub struct IssuerSpkResponse {
+    pub issuer_spk: String,
+}
+
 // -- OpenAPI definition --
 
 #[allow(dead_code)]
@@ -91,6 +97,7 @@ pub struct TimekeeperTickListResponse {
         price_feed_listings::list_price_feeds,
         signer::get_public_key,
         timekeeper::list_tick_utxos,
+        timekeeper::get_issuer_spk,
     ),
     components(schemas(
         VersionResponse,
@@ -101,6 +108,7 @@ pub struct TimekeeperTickListResponse {
         PublicKeyResponse,
         TimekeeperTickItem,
         TimekeeperTickListResponse,
+        IssuerSpkResponse,
     )),
     tags(
         (name = "General", description = "General service endpoints"),
@@ -134,6 +142,10 @@ pub fn routes(app_state: AppState) -> Router {
             get(price_feed_listings::list_price_feeds),
         )
         .route("/price-oracle/public-key", get(signer::get_public_key))
+        .route(
+            "/price-oracle/timekeeper/issuer-spk",
+            get(timekeeper::get_issuer_spk),
+        )
         .route(
             "/price-oracle/timekeeper/ticks",
             get(timekeeper::list_tick_utxos),
