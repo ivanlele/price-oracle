@@ -27,60 +27,6 @@ impl TimekeeperUtxo {
 }
 
 impl DbState {
-    pub async fn get_current_timekeeper_supply_utxo(
-        &self,
-    ) -> Result<Option<TimekeeperUtxo>, sqlx::Error> {
-        let row = sqlx::query(
-            "SELECT * FROM timekeeper_supply_utxos WHERE spent = FALSE ORDER BY id DESC LIMIT 1",
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        match row {
-            Some(row) => Ok(Some(TimekeeperUtxo::from_row(&row)?)),
-            None => Ok(None),
-        }
-    }
-
-    pub async fn insert_timekeeper_supply_utxo(
-        &self,
-        txid: &str,
-        vout: i32,
-        amount: i64,
-        created_at: i64,
-    ) -> Result<TimekeeperUtxo, sqlx::Error> {
-        let row = sqlx::query(
-            "INSERT INTO timekeeper_supply_utxos (txid, vout, amount, created_at) \
-             VALUES ($1, $2, $3, $4) \
-             RETURNING *",
-        )
-        .bind(txid)
-        .bind(vout)
-        .bind(amount)
-        .bind(created_at)
-        .fetch_one(&self.pool)
-        .await?;
-
-        TimekeeperUtxo::from_row(&row)
-    }
-
-    pub async fn spend_timekeeper_supply_utxo(
-        &self,
-        txid: &str,
-        vout: i32,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query(
-            "UPDATE timekeeper_supply_utxos SET spent = TRUE WHERE txid = $1 AND vout = $2",
-        )
-        .bind(txid)
-        .bind(vout)
-        .execute(&self.pool)
-        .await?;
-        Ok(())
-    }
-}
-
-impl DbState {
     pub async fn insert_timekeeper_tick_utxo(
         &self,
         txid: &str,

@@ -59,6 +59,21 @@ pub struct Timekeeper {
     tx_lock: tokio::sync::Mutex<()>,
 }
 
+impl Timekeeper {
+    /// Find the supply UTXO (the one at the issuer address with the timestamp asset).
+    fn get_supply_utxo(&self) -> Result<UTXO, Error> {
+        let utxos = self
+            .signer
+            .get_utxos()
+            .map_err(|e| Error::Signer(e.to_string()))?;
+
+        utxos
+            .into_iter()
+            .find(|u| u.explicit_asset() == self.asset_id)
+            .ok_or(Error::NoSupplyUtxo)
+    }
+}
+
 impl std::fmt::Debug for Timekeeper {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Timekeeper")
@@ -151,10 +166,6 @@ impl Timekeeper {
             )
             .await?;
 
-        tk.db
-            .insert_timekeeper_supply_utxo(&issuance_txid.to_string(), 0, max_supply as i64, now)
-            .await?;
-
         tracing::info!(
             "Timestamp asset issued: {}, txid: {issuance_txid}",
             tk.asset_id
@@ -205,12 +216,12 @@ impl Timekeeper {
         // Background return-to-issuer loop
         tokio::spawn(async move {
             loop {
+                tokio::time::sleep(Duration::from_secs(return_interval)).await;
+
                 match this_return.return_expired_ticks().await {
                     Ok(_) => {}
                     Err(e) => tracing::error!("Return-to-issuer failed: {e}"),
                 }
-
-                tokio::time::sleep(Duration::from_secs(return_interval)).await;
             }
         });
     }
@@ -260,26 +271,13 @@ impl Timekeeper {
         let _guard = self.tx_lock.lock().await;
 
         let timestamp = now_unix() as u64;
+        let supply_utxo = self.get_supply_utxo()?;
+        let supply_amount = supply_utxo.explicit_amount();
 
-        let utxo_row = self
-            .db
-            .get_current_timekeeper_supply_utxo()
-            .await?
-            .ok_or(Error::NoSupplyUtxo)?;
-
-        let result = self.build_sign_broadcast_tick(timestamp, &utxo_row)?;
-
-        self.db
-            .spend_timekeeper_supply_utxo(&utxo_row.txid, utxo_row.vout)
-            .await?;
+        let result = self.build_sign_broadcast_tick(timestamp, &supply_utxo)?;
 
         let now = now_unix();
-        let change_amount = utxo_row.amount as u64 - timestamp;
-
-        // Output 0 is the change (back to issuer)
-        self.db
-            .insert_timekeeper_supply_utxo(&result.txid, 0, change_amount as i64, now)
-            .await?;
+        let change_amount = supply_amount - timestamp;
 
         // Output 1 is the tick UTXO (at covenant address)
         self.db
@@ -303,40 +301,15 @@ impl Timekeeper {
     fn build_sign_broadcast_tick(
         &self,
         timestamp: u64,
-        supply_row: &crate::db::timekeeper_utxos::TimekeeperUtxo,
+        supply_utxo: &UTXO,
     ) -> Result<TickResult, Error> {
-        let supply_amount = supply_row.amount as u64;
-
-        // Fetch the supply UTXO (at the issuer's address)
-        let supply_txid: Txid = supply_row.txid.parse().expect("valid txid in DB");
-        let tx = self
-            .signer
-            .get_provider()
-            .fetch_transaction(&supply_txid)
-            .map_err(|e| Error::Signer(format!("fetch supply tx: {e}")))?;
-
-        let supply_vout = supply_row.vout as u32;
-        let supply_txout = tx
-            .output
-            .get(supply_vout as usize)
-            .ok_or(Error::NoSupplyUtxo)?
-            .clone();
-
-        let supply_utxo = UTXO {
-            outpoint: OutPoint {
-                txid: supply_txid,
-                vout: supply_vout,
-            },
-            txout: supply_txout,
-            secrets: None,
-        };
-
+        let supply_amount = supply_utxo.explicit_amount();
         let change_amount = supply_amount - timestamp;
 
         let mut ft = FinalTransaction::new();
 
         ft.add_input(
-            PartialInput::new(supply_utxo),
+            PartialInput::new(supply_utxo.clone()),
             RequiredSignature::NativeEcdsa,
         );
 
@@ -377,22 +350,9 @@ impl Timekeeper {
             return Ok(());
         }
 
-        let covenant_row = self
-            .db
-            .get_current_timekeeper_supply_utxo()
-            .await?
-            .ok_or(Error::NoSupplyUtxo)?;
+        let supply_utxo = self.get_supply_utxo()?;
 
-        let (txid, new_supply) = self.build_broadcast_return(&covenant_row, &expired)?;
-
-        self.db
-            .spend_timekeeper_supply_utxo(&covenant_row.txid, covenant_row.vout)
-            .await?;
-
-        let now = now_unix();
-        self.db
-            .insert_timekeeper_supply_utxo(&txid.to_string(), 0, new_supply as i64, now)
-            .await?;
+        let (txid, new_supply) = self.build_broadcast_return(&supply_utxo, &expired)?;
 
         let ids: Vec<i32> = expired.iter().map(|t| t.id).collect();
         self.db.mark_timekeeper_tick_utxos_spent(&ids).await?;
@@ -413,38 +373,14 @@ impl Timekeeper {
     /// build and broadcast the return-to-issuer transaction.
     fn build_broadcast_return(
         &self,
-        supply_row: &crate::db::timekeeper_utxos::TimekeeperUtxo,
+        supply_utxo: &UTXO,
         expired: &[crate::db::timekeeper_utxos::TimekeeperUtxo],
     ) -> Result<(Txid, u64), Error> {
-        // Fetch the supply UTXO (at the issuer's address)
-        let supply_txid: Txid = supply_row.txid.parse().expect("valid txid in DB");
-        let supply_tx = self
-            .signer
-            .get_provider()
-            .fetch_transaction(&supply_txid)
-            .map_err(|e| Error::Signer(format!("fetch supply tx: {e}")))?;
-
-        let supply_vout = supply_row.vout as u32;
-        let supply_txout = supply_tx
-            .output
-            .get(supply_vout as usize)
-            .ok_or(Error::NoSupplyUtxo)?
-            .clone();
-
-        let supply_utxo = UTXO {
-            outpoint: OutPoint {
-                txid: supply_txid,
-                vout: supply_vout,
-            },
-            txout: supply_txout,
-            secrets: None,
-        };
-
         let mut ft = FinalTransaction::new();
         let mut total_returned: u64 = 0;
 
         ft.add_input(
-            PartialInput::new(supply_utxo),
+            PartialInput::new(supply_utxo.clone()),
             RequiredSignature::NativeEcdsa,
         );
 
@@ -486,7 +422,7 @@ impl Timekeeper {
             total_returned += tick.amount as u64;
         }
 
-        let new_supply = supply_row.amount as u64 + total_returned;
+        let new_supply = supply_utxo.explicit_amount() + total_returned;
 
         // back to issuer address
         ft.add_output(PartialOutput::new(
