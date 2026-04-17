@@ -2,6 +2,7 @@ pub mod price_feed;
 pub mod price_feed_listings;
 pub mod signer;
 pub mod state;
+pub mod timekeeper;
 
 use axum::{Json, Router, response::IntoResponse, routing::get};
 use serde::Serialize;
@@ -58,6 +59,24 @@ pub struct PublicKeyResponse {
     pub public_key: String,
 }
 
+#[allow(dead_code)]
+#[derive(Serialize, ToSchema)]
+pub struct TimekeeperTickItem {
+    pub txid: String,
+    pub vout: i32,
+    pub amount: i64,
+    pub created_at: i64,
+}
+
+#[allow(dead_code)]
+#[derive(Serialize, ToSchema)]
+pub struct TimekeeperTickListResponse {
+    pub items: Vec<TimekeeperTickItem>,
+    pub total: i64,
+    pub limit: i64,
+    pub offset: i64,
+}
+
 // -- OpenAPI definition --
 
 #[allow(dead_code)]
@@ -71,6 +90,7 @@ pub struct PublicKeyResponse {
         price_feed::get_price_feed,
         price_feed_listings::list_price_feeds,
         signer::get_public_key,
+        timekeeper::list_tick_utxos,
     ),
     components(schemas(
         VersionResponse,
@@ -79,11 +99,14 @@ pub struct PublicKeyResponse {
         PriceFeedListItem,
         PriceFeedListResponse,
         PublicKeyResponse,
+        TimekeeperTickItem,
+        TimekeeperTickListResponse,
     )),
     tags(
         (name = "General", description = "General service endpoints"),
         (name = "Price Feeds", description = "Price feed data"),
         (name = "Signer", description = "Signer information"),
+        (name = "Timekeeper", description = "Timekeeper tick UTXOs"),
     )
 )]
 pub struct ApiDoc;
@@ -111,5 +134,9 @@ pub fn routes(app_state: AppState) -> Router {
             get(price_feed_listings::list_price_feeds),
         )
         .route("/price-oracle/public-key", get(signer::get_public_key))
+        .route(
+            "/price-oracle/timekeeper/ticks",
+            get(timekeeper::list_tick_utxos),
+        )
         .with_state(app_state)
 }

@@ -130,4 +130,32 @@ impl DbState {
             .await?;
         Ok(())
     }
+
+    pub async fn get_unspent_timekeeper_tick_utxos(
+        &self,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<TimekeeperUtxo>, sqlx::Error> {
+        let rows = sqlx::query(
+            "SELECT * FROM timekeeper_tick_utxos \
+             WHERE spent = FALSE \
+             ORDER BY created_at DESC \
+             LIMIT $1 OFFSET $2",
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter().map(TimekeeperUtxo::from_row).collect()
+    }
+
+    pub async fn count_unspent_timekeeper_tick_utxos(&self) -> Result<i64, sqlx::Error> {
+        let row =
+            sqlx::query("SELECT COUNT(*) as count FROM timekeeper_tick_utxos WHERE spent = FALSE")
+                .fetch_one(&self.pool)
+                .await?;
+
+        row.try_get("count")
+    }
 }
