@@ -48,9 +48,10 @@ Each crawled feed is signed with a Schnorr signature using the configured privat
 
 The 44-byte suffix is a constant:
 
-```
+```hex
 7d17e21ff2908408473658adab09a690ede3e6d74112222f79737296447475c9031e7388931bb03890c1e79c
 ```
+
 ### Feed Types
 
 There are two types of feeds, determined by the format of entries in the `feeds` config array:
@@ -81,6 +82,21 @@ The converter handles the fixed-point arithmetic and decimal scaling automatical
    - For a direct pair: `"ETH/USD"`
    - For a derived cross rate: `"ETH/USD/USDT"` (each hop must be covered by a contract in `addresses`)
 4. Restart the service. The new feed will be auto-registered and crawled on the next cycle.
+
+## Timekeeper
+
+The timekeeper issues a Liquid asset and periodically creates **tick UTXOs** — small outputs whose value encodes a UNIX timestamp. The supply UTXO lives at the issuer's ECDSA address, tick UTXOs are sent to a Simplicity covenant that enforces they can only be returned to the issuer.
+
+### Endpoints
+
+- `GET /price-oracle/timekeeper/issuer-spk` — returns the issuer's `script_pubkey` (hex). This is the address that controls the supply UTXO.
+- `GET /price-oracle/timekeeper/ticks?limit=20&offset=0` — paginated list of unspent tick UTXOs.
+
+### Using Tick UTXOs
+
+To verify a timestamp on-chain, read its explicit value.
+
+See [`return_expired_ticks()`](src/timekeeper/mod.rs#L341) for an example of how to build a transaction with a tick UTXO.
 
 ## License
 
