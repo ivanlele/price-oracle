@@ -1,0 +1,52 @@
+/*
+ * ORACLE PRICE GUARD
+ *
+ * Allows spending a funded UTXO if a Schnorr-signed oracle feed proves
+ * that the selected price feed is below a fixed threshold.
+ *
+ * This contract checks the oracle data. The overall transaction flow also
+ * includes a timestamp-covenant input, so the spend depends on both the
+ * oracle message and inclusion of a timestamp asset UTXO.
+ */
+fn oracle_message_hash(feed_id: u32, price: u64, timestamp: u32, valid_until: u32) -> u256 {
+    let ctx: Ctx8 = jet::sha_256_ctx_8_init();
+    let ctx: Ctx8 = jet::sha_256_ctx_8_add_4(ctx, feed_id);
+    let ctx: Ctx8 = jet::sha_256_ctx_8_add_8(ctx, price);
+    let ctx: Ctx8 = jet::sha_256_ctx_8_add_4(ctx, timestamp);
+    let ctx: Ctx8 = jet::sha_256_ctx_8_add_4(ctx, valid_until);
+    let ctx: Ctx8 = jet::sha_256_ctx_8_add_32(ctx, 0x7d17e21ff2908408473658adab09a690ede3e6d74112222f79737296447475c9);
+    let ctx: Ctx8 = jet::sha_256_ctx_8_add_8(ctx, 0x031e7388931bb038);
+    let ctx: Ctx8 = jet::sha_256_ctx_8_add_4(ctx, 0x90c1e79c);
+    jet::sha_256_ctx_8_finalize(ctx)
+}
+
+fn main() {
+    let price: u64 = witness::PRICE;
+    let timestamp: u32 = witness::TIMESTAMP;
+    let valid_until: u32 = witness::VALID_UNTIL;
+    let sig: Signature = witness::ORACLE_SIGNATURE;
+
+    let msg: u256 = oracle_message_hash(
+        param::FEED_ID,
+        price,
+        timestamp,
+        valid_until,
+    );
+
+    jet::bip_0340_verify((param::ORACLE_PUBKEY, msg), sig);
+
+    assert!(jet::lt_64(price, param::MAX_PRICE));
+
+    // Check that the timestamp UTXO (input 1) was minted before the oracle data expired.
+    // Tick UTXO values encode the UNIX timestamp in satoshis.
+    let tick_pair: (Asset1, Amount1) = unwrap(jet::input_amount(1));
+    let (tick_asset, tick_amount_either): (Asset1, Amount1) = tick_pair;
+    let tick_asset_bits: u256 = unwrap_right::<(u1, u256)>(tick_asset);
+    assert!(jet::eq_256(param::TICK_ASSET_ID, tick_asset_bits));
+    let tick_amount: u64 = unwrap_right::<(u1, u256)>(tick_amount_either);
+    let valid_until_64: u64 = jet::left_pad_low_32_64(valid_until);
+    assert!(jet::le_64(tick_amount, valid_until_64));
+
+    let out_script_hash: u256 = unwrap(jet::output_script_hash(1));
+    assert!(jet::eq_256(param::CLAIM_SCRIPT_HASH, out_script_hash));
+}

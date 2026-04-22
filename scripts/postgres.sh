@@ -8,7 +8,7 @@ POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-oracle}"
 POSTGRES_DB="${POSTGRES_DB:-price_oracle}"
 
 usage() {
-    echo "Usage: $0 {create|stop|destroy}"
+    echo "Usage: $0 {create|stop|destroy|drop}"
     exit 1
 }
 
@@ -44,9 +44,23 @@ destroy() {
     echo "Container destroyed."
 }
 
+drop_tables() {
+    if ! docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
+        echo "Container '${CONTAINER_NAME}' is not running."
+        exit 1
+    fi
+
+    echo "Dropping all tables in database '${POSTGRES_DB}'..."
+    docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "${CONTAINER_NAME}" \
+        psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 \
+        -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+    echo "All tables dropped."
+}
+
 case "${1:-}" in
-    create)  create  ;;
-    stop)    stop    ;;
-    destroy) destroy ;;
-    *)       usage   ;;
+    create)      create      ;;
+    stop)        stop        ;;
+    destroy)     destroy     ;;
+    drop) drop_tables ;;
+    *)           usage       ;;
 esac

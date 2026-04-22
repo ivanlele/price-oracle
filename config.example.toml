@@ -15,10 +15,10 @@ database = "price_oracle"
 max_connections = 5
 
 [service.timekeeper]
-rpc_url = "http://localhost:18884"
+rpc_url = "http://localhost:18443"
 rpc_user = "elements"
 rpc_password = "elements"
-esplora_url = "http://localhost:58077"
+esplora_url = "http://localhost:3000"
 signer_mnemonic = "exist carry drive collect lend cereal occur much tiger just involve mean"
 publish_interval_seconds = 60 # Interval in seconds at which the timekeeper will publish a new timestamp
 return_to_issuer_interval_seconds = 300 # Interval in seconds after which the timekeeper will return the timestamp UTXO to the issuer if not used
