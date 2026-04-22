@@ -49,6 +49,31 @@ impl DbState {
         TimekeeperUtxo::from_row(&row)
     }
 
+    pub async fn get_all_unspent_timekeeper_tick_utxos(
+        &self,
+    ) -> Result<Vec<TimekeeperUtxo>, sqlx::Error> {
+        let rows = sqlx::query(
+            "SELECT * FROM timekeeper_tick_utxos \
+             WHERE spent = FALSE \
+             ORDER BY created_at ASC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter().map(TimekeeperUtxo::from_row).collect()
+    }
+
+    pub async fn get_all_timekeeper_tick_utxos(&self) -> Result<Vec<TimekeeperUtxo>, sqlx::Error> {
+        let rows = sqlx::query(
+            "SELECT * FROM timekeeper_tick_utxos \
+             ORDER BY created_at ASC",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.iter().map(TimekeeperUtxo::from_row).collect()
+    }
+
     pub async fn get_expired_timekeeper_tick_utxos(
         &self,
         max_age_seconds: i64,
@@ -67,11 +92,24 @@ impl DbState {
     }
 
     pub async fn mark_timekeeper_tick_utxos_spent(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
+        self.set_timekeeper_tick_utxo_spent_state(ids, true).await
+    }
+
+    pub async fn mark_timekeeper_tick_utxos_unspent(&self, ids: &[i32]) -> Result<(), sqlx::Error> {
+        self.set_timekeeper_tick_utxo_spent_state(ids, false).await
+    }
+
+    async fn set_timekeeper_tick_utxo_spent_state(
+        &self,
+        ids: &[i32],
+        spent: bool,
+    ) -> Result<(), sqlx::Error> {
         if ids.is_empty() {
             return Ok(());
         }
-        sqlx::query("UPDATE timekeeper_tick_utxos SET spent = TRUE WHERE id = ANY($1)")
+        sqlx::query("UPDATE timekeeper_tick_utxos SET spent = $2 WHERE id = ANY($1)")
             .bind(ids)
+            .bind(spent)
             .execute(&self.pool)
             .await?;
         Ok(())
