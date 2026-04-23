@@ -15,7 +15,7 @@ cmd=(cargo run --bin oracle_price_threshold_demo -- --threshold "${THRESHOLD}")
 # Interactive mode is enabled by default for transaction inspection.
 # Set ORACLE_DEMO_INTERACTIVE=0 to disable prompts.
 if [[ "${ORACLE_DEMO_INTERACTIVE:-1}" != "0" ]]; then
-	cmd+=(--interactive)
+	cmd+=(--interactive true)
 fi
 
 cmd+=("$@")
