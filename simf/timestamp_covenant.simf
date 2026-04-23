@@ -14,11 +14,17 @@ fn main() {
     let out_script_hash: u256 = unwrap(jet::output_script_hash(0));
     assert!(jet::eq_256(param::ISSUER_SCRIPT_HASH, out_script_hash));
 
-    // Output 0 value must be non-zero (explicit amount expected)
-    let out_amt: (Either<(u1, u256), u256>, Either<(u1, u256), u64>) = unwrap(jet::output_amount(0));
-    let (_, value_either): (Either<(u1, u256), u256>, Either<(u1, u256), u64>) = out_amt;
-    match value_either {
-        Left(confidential: (u1, u256)) => panic!(),
-        Right(value: u64) => assert!(jet::lt_64(0, value)),
-    };
+    // Output 0 must carry the tick asset, not a substitute
+    let out_asset: Asset1 = unwrap(jet::output_asset(0));
+    let out_asset_bits: u256 = unwrap_right::<(u1, u256)>(out_asset);
+    assert!(jet::eq_256(param::TICK_ASSET_ID, out_asset_bits));
+
+    // Output 0 value must equal this input's value (full tick amount returned)
+    let in_pair: (Asset1, Amount1) = unwrap(jet::input_amount(jet::current_index()));
+    let (_, in_amount_either): (Asset1, Amount1) = in_pair;
+    let in_amount: u64 = unwrap_right::<(u1, u256)>(in_amount_either);
+    let out_pair: (Asset1, Amount1) = unwrap(jet::output_amount(0));
+    let (_, out_amount_either): (Asset1, Amount1) = out_pair;
+    let out_amount: u64 = unwrap_right::<(u1, u256)>(out_amount_either);
+    assert!(jet::eq_64(in_amount, out_amount));
 }

@@ -38,13 +38,13 @@ The crawler periodically reads prices from on-chain Chainlink-compatible `EACAgg
 
 Each crawled feed is signed with a Schnorr signature using the configured private key. The signed result is stored in PostgreSQL and served via the API. Message format for signing is a 64-byte buffer:
 
-| Offset | Size | Field |
-|--------|------|-------|
-| 0 | 4 bytes | Feed ID (`u32`, big-endian) |
-| 4 | 8 bytes | Price (`u64`, big-endian) |
-| 12 | 4 bytes | Timestamp (`u32`, big-endian, UNIX epoch) |
-| 16 | 4 bytes | Valid Until (`u32`, big-endian, UNIX epoch) |
-| 20 | 44 bytes | Fixed suffix (`FEED_MESSAGE_SUFFIX`) |
+| Offset | Size     | Field                                       |
+|--------|----------|---------------------------------------------|
+| 0      | 4 bytes  | Feed ID (`u32`, big-endian)                 |
+| 4      | 8 bytes  | Price (`u64`, big-endian)                   |
+| 12     | 4 bytes  | Timestamp (`u32`, big-endian, UNIX epoch)   |
+| 16     | 4 bytes  | Valid Until (`u32`, big-endian, UNIX epoch) |
+| 20     | 44 bytes | Fixed suffix (`FEED_MESSAGE_SUFFIX`)        |
 
 The 44-byte suffix is a constant:
 
